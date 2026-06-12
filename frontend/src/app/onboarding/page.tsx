@@ -86,9 +86,9 @@ export default function Onboarding() {
       </main>
 
       <footer className="mt-8 text-center pb-8">
-        <button className="bg-green-600 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-green-700 transition-colors w-full">
+        <Link href="/dashboard" className="block w-full bg-green-600 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-green-700 transition-colors text-center no-underline">
           ¡Entendido, vamos a Jugar!
-        </button>
+        </Link>
       </footer>
     </div>
   );
