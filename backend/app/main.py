@@ -265,6 +265,10 @@ def update_group_config(
 def get_matches(session: Session = Depends(get_session)):
     return session.exec(select(Match)).all()
 
+from app.schemas.leaderboard import LeaderboardRead, LeaderboardEntry
+
+# ... (código existente)
+
 @app.get("/predictions/my")
 def get_my_predictions(
     session: Session = Depends(get_session),
@@ -279,14 +283,21 @@ def create_bulk_predictions(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
-    # Por ahora, si no hay grupos creados, usaremos un ID nulo o uno por defecto
-    # En una versión final, el frontend enviaría el group_id real.
-    
     for item in predictions_data:
         match_id = uuid.UUID(item["match_id"])
-        group_id = uuid.UUID(item.get("group_id", "00000000-0000-0000-0000-000000000000"))
+        group_id = uuid.UUID(item["group_id"])
         
-        # Buscar si ya existe una predicción para este usuario y partido
+        # REGLA DE BLOQUEO CRÍTICA: Verificar hora del servidor
+        match = session.get(Match, match_id)
+        if not match:
+            continue
+            
+        time_diff = match.start_at - datetime.utcnow()
+        if time_diff.total_seconds() < 300: # 5 minutos = 300 segundos
+            # Si falta menos de 5 min o ya empezó, ignoramos este item
+            continue
+        
+        # Buscar si ya existe para este usuario, partido Y grupo
         existing_prediction = session.exec(
             select(Prediction).where(
                 Prediction.user_id == current_user.id,
@@ -296,13 +307,11 @@ def create_bulk_predictions(
         ).first()
 
         if existing_prediction:
-            # Actualizar la existente
             existing_prediction.predicted_goals1 = item["predicted_goals1"]
             existing_prediction.predicted_goals2 = item["predicted_goals2"]
             existing_prediction.updated_at = datetime.utcnow()
             session.add(existing_prediction)
         else:
-            # Crear una nueva
             prediction = Prediction(
                 user_id=current_user.id,
                 match_id=match_id,
@@ -314,6 +323,66 @@ def create_bulk_predictions(
     
     session.commit()
     return {"status": "success", "count": len(predictions_data)}
+
+@app.get("/groups/{group_id}/leaderboard", response_model=LeaderboardRead)
+def get_group_leaderboard(
+    group_id: UUID,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    # 1. Verificar acceso al grupo
+    group = session.get(Group, group_id)
+    if not group:
+        raise HTTPException(status_code=404, detail="Grupo no encontrado")
+        
+    member = session.exec(select(UserGroupLink).where(UserGroupLink.user_id == current_user.id, UserGroupLink.group_id == group_id)).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="No tienes acceso a este grupo")
+    
+    # 2. Obtener configuración del grupo y partidos finalizados
+    config = session.exec(select(GroupConfiguration).where(GroupConfiguration.group_id == group_id)).one()
+    finished_matches = session.exec(select(Match).where(Match.is_finished == True)).all()
+    
+    leaderboard = []
+    
+    # 3. Calcular puntos por cada miembro (esto podría optimizarse en producción)
+    # Obtenemos todos los miembros del grupo
+    members = session.exec(
+        select(User).join(UserGroupLink).where(UserGroupLink.group_id == group_id)
+    ).all()
+    
+    for user in members:
+        total_pts = 0
+        preds = session.exec(select(Prediction).where(Prediction.user_id == user.id, Prediction.group_id == group_id)).all()
+        
+        for p in preds:
+            # Solo sumar puntos si el partido terminó
+            m = next((m for m in finished_matches if m.id == p.match_id), None)
+            if m:
+                is_ko = m.phase != "group"
+                pts = calculate_points(
+                    p.predicted_goals1, p.predicted_goals2,
+                    m.actual_goals1, m.actual_goals2,
+                    is_knockout=is_ko,
+                    pts_result=config.pts_result_ko if is_ko else config.pts_result_gr,
+                    pts_goals=config.pts_goals_ko if is_ko else config.pts_goals_gr,
+                    pts_diff=config.pts_diff_ko if is_ko else config.pts_diff_gr
+                )
+                total_pts += pts
+        
+        leaderboard.append(LeaderboardEntry(
+            user_id=user.id,
+            username=user.username,
+            full_name=user.full_name,
+            avatar_url=user.avatar_url,
+            total_points=total_pts,
+            predictions_count=len(preds)
+        ))
+    
+    # 4. Ordenar: Puntos desc, luego nombre
+    leaderboard.sort(key=lambda x: (-x.total_points, x.username))
+    
+    return LeaderboardRead(group_id=group_id, entries=leaderboard)
 
 @app.get("/test-scoring")
 def test_scoring(p1: int, p2: int, a1: int, a2: int, knockout: bool = False):
