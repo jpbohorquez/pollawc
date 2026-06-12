@@ -7,6 +7,8 @@ from app.services.scoring import calculate_points
 from app.core.security import get_password_hash, verify_password, create_access_token
 from typing import List
 import os
+from datetime import datetime
+import uuid
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test.db")
 engine = create_engine(DATABASE_URL)
@@ -54,11 +56,8 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = D
     access_token = create_access_token(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer"}
 
-from jose import jwt
+from jose import jwt, JWTError
 from app.core.security import SECRET_KEY, ALGORITHM
-import uuid
-
-# ... (código anterior)
 
 async def get_current_user(token: str = Depends(oauth2_scheme), session: Session = Depends(get_session)):
     credentials_exception = HTTPException(
