@@ -1,8 +1,10 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
-from sqlmodel import Session, create_engine, select
+from sqlmodel import Session, create_engine, select, delete
 from app.models.models import Match, Group, Prediction, User, SQLModel
+
+# ... (rest of imports)
 from app.services.scoring import calculate_points
 from app.core.security import get_password_hash, verify_password, create_access_token
 from typing import List
@@ -204,6 +206,11 @@ def join_group(
     ).first()
     
     if existing:
+        if not existing.is_active:
+            existing.is_active = True
+            session.add(existing)
+            session.commit()
+            return {"status": "success", "group_name": group.name}
         raise HTTPException(status_code=400, detail="Ya eres miembro de este grupo")
     
     member = UserGroupLink(user_id=current_user.id, group_id=group.id)
@@ -212,8 +219,55 @@ def join_group(
     return {"status": "success", "group_name": group.name}
 
 @app.get("/groups", response_model=List[GroupRead])
-def get_my_groups(current_user: User = Depends(get_current_user)):
-    return current_user.groups
+def get_my_groups(session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+    statement = select(Group).join(UserGroupLink).where(
+        UserGroupLink.user_id == current_user.id,
+        UserGroupLink.is_active == True
+    )
+    return session.exec(statement).all()
+
+@app.post("/groups/{group_id}/leave")
+def leave_group(
+    group_id: UUID,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    link = session.exec(
+        select(UserGroupLink).where(
+            UserGroupLink.user_id == current_user.id, 
+            UserGroupLink.group_id == group_id
+        )
+    ).first()
+    
+    if not link:
+        raise HTTPException(status_code=404, detail="No eres miembro de este grupo")
+        
+    link.is_active = False
+    session.add(link)
+    session.commit()
+    return {"status": "success"}
+
+@app.delete("/groups/{group_id}")
+def delete_group(
+    group_id: UUID,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    group = session.get(Group, group_id)
+    if not group:
+        raise HTTPException(status_code=404, detail="Grupo no encontrado")
+        
+    if group.creator_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Solo el creador puede eliminar el grupo")
+    
+    # Eliminar en cascada
+    session.exec(delete(Prediction).where(Prediction.group_id == group_id))
+    session.exec(delete(UserGroupLink).where(UserGroupLink.group_id == group_id))
+    session.exec(delete(GroupConfiguration).where(GroupConfiguration.group_id == group_id))
+    session.delete(group)
+    session.commit()
+    
+    return {"status": "success"}
 
 @app.get("/groups/{group_id}/config", response_model=GroupConfigurationRead)
 def get_group_config(
@@ -441,9 +495,13 @@ def update_match_result(
     if not match:
         raise HTTPException(status_code=404, detail="Partido no encontrado")
     
-    match.actual_goals1 = result_data.actual_goals1
-    match.actual_goals2 = result_data.actual_goals2
     match.is_finished = result_data.is_finished
+    if not result_data.is_finished:
+        match.actual_goals1 = None
+        match.actual_goals2 = None
+    else:
+        match.actual_goals1 = result_data.actual_goals1
+        match.actual_goals2 = result_data.actual_goals2
     
     session.add(match)
     session.commit()

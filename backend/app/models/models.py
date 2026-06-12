@@ -7,6 +7,7 @@ class UserGroupLink(SQLModel, table=True):
     user_id: UUID = Field(foreign_key="user.id", primary_key=True)
     group_id: UUID = Field(foreign_key="group.id", primary_key=True)
     role: str = Field(default="member")
+    is_active: bool = Field(default=True)
     joined_at: datetime = Field(default_factory=datetime.utcnow)
 
 class User(SQLModel, table=True):

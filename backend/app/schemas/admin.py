@@ -3,8 +3,8 @@ from datetime import datetime
 from typing import Optional
 
 class MatchUpdateResult(BaseModel):
-    actual_goals1: int
-    actual_goals2: int
+    actual_goals1: Optional[int] = None
+    actual_goals2: Optional[int] = None
     is_finished: bool = True
 
 class MatchCreateAdmin(BaseModel):
