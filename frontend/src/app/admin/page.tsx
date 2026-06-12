@@ -38,7 +38,7 @@ export default function AdminPage() {
         setIsAdmin(true);
         const matchesData = await apiFetch("/matches");
         setMatches(matchesData.sort((a: Match, b: Match) => 
-            new Date(b.start_at).getTime() - new Date(a.start_at).getTime()
+            new Date(a.start_at).getTime() - new Date(b.start_at).getTime()
         ));
       } catch (err) {
         router.push("/login");

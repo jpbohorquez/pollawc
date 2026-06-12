@@ -18,6 +18,10 @@ interface PredictionState {
   [key: string]: {
     goals1: string;
     goals2: string;
+    points_earned?: number;
+    actual_goals1?: number | null;
+    actual_goals2?: number | null;
+    is_finished?: boolean;
   };
 }
 
@@ -58,7 +62,11 @@ export default function GroupDashboard({ params }: { params: Promise<{ id: strin
           if (initialPreds[p.match_id]) {
             initialPreds[p.match_id] = { 
               goals1: p.predicted_goals1.toString(), 
-              goals2: p.predicted_goals2.toString() 
+              goals2: p.predicted_goals2.toString(),
+              points_earned: p.points_earned,
+              actual_goals1: p.actual_goals1,
+              actual_goals2: p.actual_goals2,
+              is_finished: p.match_is_finished
             };
           }
         });
@@ -98,7 +106,7 @@ export default function GroupDashboard({ params }: { params: Promise<{ id: strin
       const toSave = Object.entries(predictions)
         .filter(([matchId, data]) => {
           const match = matches.find(m => m.id === matchId);
-          return data.goals1 !== "" && data.goals2 !== "" && match && !isLocked(match.start_at);
+          return data.goals1 !== "" && data.goals2 !== "" && match && !isLocked(match.start_at) && !data.is_finished;
         })
         .map(([matchId, data]) => ({
           match_id: matchId,
@@ -108,7 +116,7 @@ export default function GroupDashboard({ params }: { params: Promise<{ id: strin
         }));
 
       if (toSave.length === 0) {
-        setMessage("No hay marcadores válidos para guardar.");
+        setMessage("No hay nuevos marcadores válidos para guardar.");
         setSaving(false);
         return;
       }
@@ -135,7 +143,7 @@ export default function GroupDashboard({ params }: { params: Promise<{ id: strin
             <h1 className="text-lg font-bold truncate">{groupName || "Mis Pronósticos"}</h1>
             <p className="text-[10px] uppercase tracking-widest opacity-80">Ingreso de Marcadores</p>
         </div>
-        <div className="w-12"></div> {/* Spacer for alignment */}
+        <div className="w-12"></div>
       </header>
 
       <div className="max-w-md mx-auto p-4 space-y-4">
@@ -147,8 +155,11 @@ export default function GroupDashboard({ params }: { params: Promise<{ id: strin
 
         {matches.map((match) => {
           const locked = isLocked(match.start_at);
+          const pred = predictions[match.id];
+          const finished = pred?.is_finished;
+          
           return (
-            <div key={match.id} className={`bg-white rounded-2xl shadow-sm p-4 border ${locked ? "opacity-75 border-gray-200" : "border-transparent hover:border-green-200 transition-colors"}`}>
+            <div key={match.id} className={`bg-white rounded-2xl shadow-sm p-4 border ${finished ? "border-green-200 bg-green-50/20" : locked ? "opacity-75 border-gray-200" : "border-transparent hover:border-green-200 transition-colors"}`}>
               <div className="flex justify-between text-[10px] text-gray-400 mb-3 uppercase font-bold tracking-wider">
                 <span>{match.phase === 'group' ? `Grupo ${match.group_name}` : match.phase}</span>
                 <span>{new Date(match.start_at).toLocaleDateString([], {day:'2-digit', month:'short'})} · {new Date(match.start_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
@@ -157,28 +168,42 @@ export default function GroupDashboard({ params }: { params: Promise<{ id: strin
               <div className="flex items-center justify-between gap-2">
                 <div className="flex-1 text-right font-bold text-gray-700 text-sm truncate">{match.team1}</div>
                 
-                <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-xl border border-gray-100">
-                  <input
-                    type="number"
-                    disabled={locked}
-                    className={`w-11 h-11 text-center text-xl font-black rounded-lg outline-none transition-all ${locked ? "bg-gray-100 text-gray-400" : "bg-white text-green-700 focus:ring-2 focus:ring-green-500 shadow-inner"}`}
-                    value={predictions[match.id]?.goals1 || ""}
-                    onChange={(e) => handleInputChange(match.id, 1, e.target.value)}
-                  />
-                  <span className="text-gray-300 font-bold">:</span>
-                  <input
-                    type="number"
-                    disabled={locked}
-                    className={`w-11 h-11 text-center text-xl font-black rounded-lg outline-none transition-all ${locked ? "bg-gray-100 text-gray-400" : "bg-white text-green-700 focus:ring-2 focus:ring-green-500 shadow-inner"}`}
-                    value={predictions[match.id]?.goals2 || ""}
-                    onChange={(e) => handleInputChange(match.id, 2, e.target.value)}
-                  />
+                <div className="flex flex-col items-center gap-1">
+                    <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-xl border border-gray-100">
+                        <input
+                            type="number"
+                            disabled={locked || finished}
+                            className={`w-11 h-11 text-center text-xl font-black rounded-lg outline-none transition-all ${finished ? "bg-white text-gray-400" : locked ? "bg-gray-100 text-gray-400" : "bg-white text-green-700 focus:ring-2 focus:ring-green-500 shadow-inner"}`}
+                            value={pred?.goals1 || ""}
+                            onChange={(e) => handleInputChange(match.id, 1, e.target.value)}
+                        />
+                        <span className="text-gray-300 font-bold">:</span>
+                        <input
+                            type="number"
+                            disabled={locked || finished}
+                            className={`w-11 h-11 text-center text-xl font-black rounded-lg outline-none transition-all ${finished ? "bg-white text-gray-400" : locked ? "bg-gray-100 text-gray-400" : "bg-white text-green-700 focus:ring-2 focus:ring-green-500 shadow-inner"}`}
+                            value={pred?.goals2 || ""}
+                            onChange={(e) => handleInputChange(match.id, 2, e.target.value)}
+                        />
+                    </div>
+                    {finished && (
+                        <div className="text-[10px] font-black text-green-700 bg-green-100 px-2 py-0.5 rounded-full uppercase">
+                            +{pred.points_earned} PTS
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex-1 text-left font-bold text-gray-700 text-sm truncate">{match.team2}</div>
               </div>
               
-              {locked && (
+              {finished ? (
+                <div className="mt-3 pt-3 border-t border-green-100 flex justify-center gap-4 items-center">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase">Resultado Real:</span>
+                    <span className="text-sm font-black text-gray-800 bg-gray-100 px-3 py-1 rounded-lg">
+                        {pred.actual_goals1} - {pred.actual_goals2}
+                    </span>
+                </div>
+              ) : locked && (
                 <div className="mt-2 text-center text-[9px] text-red-400 font-bold uppercase flex items-center justify-center gap-1">
                   🔒 Bloqueado
                 </div>

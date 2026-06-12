@@ -62,7 +62,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6 max-w-md mx-auto">
       <header className="flex items-center gap-4 mb-8">
-        <Link href="/dashboard" className="text-green-700 font-bold">← Volver</Link>
+        <Link href="/groups" className="text-green-700 font-bold">← Volver</Link>
         <h1 className="text-2xl font-bold text-gray-800">Mi Perfil</h1>
       </header>
 

@@ -281,7 +281,36 @@ def get_my_predictions_in_group(
             Prediction.group_id == group_id
         )
     ).all()
-    return preds
+    
+    # Calcular puntos en tiempo real para la vista del dashboard
+    config = session.exec(select(GroupConfiguration).where(GroupConfiguration.group_id == group_id)).one()
+    
+    enriched_preds = []
+    for p in preds:
+        match = session.get(Match, p.match_id)
+        points = 0
+        if match and match.is_finished:
+            is_ko = match.phase != "group"
+            points = calculate_points(
+                p.predicted_goals1, p.predicted_goals2,
+                match.actual_goals1, match.actual_goals2,
+                is_knockout=is_ko,
+                pts_result=config.pts_result_ko if is_ko else config.pts_result_gr,
+                pts_goals=config.pts_goals_ko if is_ko else config.pts_goals_gr,
+                pts_diff=config.pts_diff_ko if is_ko else config.pts_diff_gr
+            )
+        
+        enriched_preds.append({
+            "match_id": p.match_id,
+            "predicted_goals1": p.predicted_goals1,
+            "predicted_goals2": p.predicted_goals2,
+            "points_earned": points,
+            "match_is_finished": match.is_finished if match else False,
+            "actual_goals1": match.actual_goals1 if match else None,
+            "actual_goals2": match.actual_goals2 if match else None
+        })
+        
+    return enriched_preds
 
 @app.post("/predictions/bulk")
 def create_bulk_predictions(
