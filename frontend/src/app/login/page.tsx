@@ -61,6 +61,12 @@ export default function LoginPage() {
         >
           Ingresar
         </button>
+        
+        <div className="text-center">
+          <Link href="/forgot-password" size="sm" className="text-sm text-gray-500 hover:text-green-600 transition">
+            ¿Olvidaste tu contraseña?
+          </Link>
+        </div>
       </form>
 
       <p className="mt-8 text-center text-sm text-gray-600">
