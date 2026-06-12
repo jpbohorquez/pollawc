@@ -23,7 +23,7 @@ async def send_reset_password_email(email_to: str, token: str):
     En este modo 'interno', el correo siempre se envía al ADMIN_EMAIL, 
     especificando qué usuario lo solicitó.
     """
-    admin_email = os.getenv("ADMIN_EMAIL", os.getenv("SMTP_USER", "dummy"))
+    admin_email = os.getenv("ADMIN_EMAIL", os.getenv("SMTP_USER", "admin@example.com"))
     
     html_content = f"""
     <div style="font-family: Arial, sans-serif; max-w-md: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
