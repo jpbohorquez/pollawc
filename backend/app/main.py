@@ -384,6 +384,56 @@ def get_group_leaderboard(
     
     return LeaderboardRead(group_id=group_id, entries=leaderboard)
 
+from app.schemas.admin import MatchUpdateResult, MatchCreateAdmin
+
+async def get_current_active_superuser(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    if not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="No tienes permisos de administrador"
+        )
+    return current_user
+
+@app.post("/admin/matches/{match_id}/results", response_model=Match)
+def update_match_result(
+    match_id: UUID,
+    result_data: MatchUpdateResult,
+    session: Session = Depends(get_session),
+    admin_user: User = Depends(get_current_active_superuser)
+):
+    match = session.get(Match, match_id)
+    if not match:
+        raise HTTPException(status_code=404, detail="Partido no encontrado")
+    
+    match.actual_goals1 = result_data.actual_goals1
+    match.actual_goals2 = result_data.actual_goals2
+    match.is_finished = result_data.is_finished
+    
+    session.add(match)
+    session.commit()
+    session.refresh(match)
+    return match
+
+@app.post("/admin/matches", response_model=Match)
+def create_match_admin(
+    match_data: MatchCreateAdmin,
+    session: Session = Depends(get_session),
+    admin_user: User = Depends(get_current_active_superuser)
+):
+    new_match = Match(
+        team1=match_data.team1,
+        team2=match_data.team2,
+        group_name=match_data.group_name,
+        stadium=match_data.stadium,
+        start_at=match_data.start_at,
+        phase=match_data.phase
+    )
+    session.add(new_match)
+    session.commit()
+    session.refresh(new_match)
+    return new_match
+
 @app.get("/test-scoring")
 def test_scoring(p1: int, p2: int, a1: int, a2: int, knockout: bool = False):
     pts = calculate_points(p1, p2, a1, a2, knockout)

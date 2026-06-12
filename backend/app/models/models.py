@@ -16,6 +16,7 @@ class User(SQLModel, table=True):
     hashed_password: str
     full_name: Optional[str] = None
     avatar_url: Optional[str] = None
+    is_superuser: bool = Field(default=False)
     
     # Reset Password Fields
     reset_token: Optional[str] = None
