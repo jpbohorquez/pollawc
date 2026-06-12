@@ -10,3 +10,4 @@ pandas
 openpyxl
 alembic
 pydantic-settings
+email-validator
