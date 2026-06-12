@@ -46,7 +46,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = D
 
 @app.get("/matches", response_model=List[Match])
 def get_matches(session: Session = Depends(get_session)):
-...
+    return session.exec(select(Match)).all()
 
 @app.post("/predictions/bulk")
 def create_bulk_predictions(predictions: List[Prediction], session: Session = Depends(get_session)):
