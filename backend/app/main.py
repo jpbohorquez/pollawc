@@ -78,9 +78,10 @@ async def get_current_user(token: str = Depends(oauth2_scheme), session: Session
     return user
 
 from app.schemas.user import UserProfileUpdate, UserRead, ForgotPasswordRequest, ResetPasswordRequest
+from app.schemas.group import GroupCreate, GroupRead, GroupJoin, GroupConfigurationRead, GroupConfigurationUpdate
+from app.models.models import UserGroupLink, GroupConfiguration
 import secrets
-
-# ... (código existente)
+import string
 
 @app.get("/users/me", response_model=UserRead)
 def get_user_me(current_user: User = Depends(get_current_user)):
@@ -147,6 +148,117 @@ def reset_password(request: ResetPasswordRequest, session: Session = Depends(get
     session.add(user)
     session.commit()
     return {"message": "Contraseña actualizada exitosamente"}
+
+@app.post("/groups", response_model=GroupRead)
+def create_group(
+    group_data: GroupCreate, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    # Generar código de invitación único de 6 caracteres
+    alphabet = string.ascii_uppercase + string.digits
+    while True:
+        code = ''.join(secrets.choice(alphabet) for _ in range(6))
+        existing = session.exec(select(Group).where(Group.invite_code == code)).first()
+        if not existing:
+            break
+    
+    # Crear grupo
+    new_group = Group(
+        name=group_data.name,
+        invite_code=code,
+        creator_id=current_user.id
+    )
+    session.add(new_group)
+    session.commit()
+    session.refresh(new_group)
+    
+    # Inicializar configuración por defecto
+    config = GroupConfiguration(group_id=new_group.id)
+    session.add(config)
+    
+    # Agregar al creador como miembro admin
+    member = UserGroupLink(user_id=current_user.id, group_id=new_group.id, role="admin")
+    session.add(member)
+    
+    session.commit()
+    return new_group
+
+@app.post("/groups/join")
+def join_group(
+    join_data: GroupJoin, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    group = session.exec(select(Group).where(Group.invite_code == join_data.invite_code)).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="Código de invitación inválido")
+    
+    # Verificar si ya es miembro
+    existing = session.exec(
+        select(UserGroupLink).where(
+            UserGroupLink.user_id == current_user.id, 
+            UserGroupLink.group_id == group.id
+        )
+    ).first()
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="Ya eres miembro de este grupo")
+    
+    member = UserGroupLink(user_id=current_user.id, group_id=group.id)
+    session.add(member)
+    session.commit()
+    return {"status": "success", "group_name": group.name}
+
+@app.get("/groups", response_model=List[GroupRead])
+def get_my_groups(current_user: User = Depends(get_current_user)):
+    return current_user.groups
+
+@app.get("/groups/{group_id}/config", response_model=GroupConfigurationRead)
+def get_group_config(
+    group_id: UUID, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    # Verificar que el usuario pertenece al grupo
+    member = session.exec(
+        select(UserGroupLink).where(
+            UserGroupLink.user_id == current_user.id, 
+            UserGroupLink.group_id == group_id
+        )
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="No tienes acceso a este grupo")
+    
+    config = session.exec(select(GroupConfiguration).where(GroupConfiguration.group_id == group_id)).first()
+    if not config:
+        raise HTTPException(status_code=404, detail="Configuración no encontrada")
+    return config
+
+@app.put("/groups/{group_id}/config", response_model=GroupConfigurationRead)
+def update_group_config(
+    group_id: UUID,
+    config_update: GroupConfigurationUpdate,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    group = session.get(Group, group_id)
+    if not group:
+        raise HTTPException(status_code=404, detail="Grupo no encontrado")
+    
+    # Solo el creador puede editar la configuración
+    if group.creator_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Solo el creador puede modificar las reglas")
+    
+    config = session.exec(select(GroupConfiguration).where(GroupConfiguration.group_id == group_id)).first()
+    
+    for key, value in config_update.model_dump(exclude_unset=True).items():
+        setattr(config, key, value)
+    
+    session.add(config)
+    session.commit()
+    session.refresh(config)
+    return config
 
 @app.get("/matches", response_model=List[Match])
 def get_matches(session: Session = Depends(get_session)):

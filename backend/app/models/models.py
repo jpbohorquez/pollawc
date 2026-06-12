@@ -22,6 +22,7 @@ class User(SQLModel, table=True):
     reset_token_expires: Optional[datetime] = None
     
     predictions: List["Prediction"] = Relationship(back_populates="user")
+    groups: List["Group"] = Relationship(back_populates="members", link_model=UserGroupLink)
 
 class Group(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
@@ -31,6 +32,7 @@ class Group(SQLModel, table=True):
     
     config: "GroupConfiguration" = Relationship(back_populates="group")
     predictions: List["Prediction"] = Relationship(back_populates="group")
+    members: List["User"] = Relationship(back_populates="groups", link_model=UserGroupLink)
 
 class GroupConfiguration(SQLModel, table=True):
     group_id: UUID = Field(foreign_key="group.id", primary_key=True)
