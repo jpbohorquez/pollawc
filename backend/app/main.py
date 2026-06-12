@@ -82,6 +82,14 @@ async def get_current_user(token: str = Depends(oauth2_scheme), session: Session
 def get_matches(session: Session = Depends(get_session)):
     return session.exec(select(Match)).all()
 
+@app.get("/predictions/my")
+def get_my_predictions(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    preds = session.exec(select(Prediction).where(Prediction.user_id == current_user.id)).all()
+    return preds
+
 @app.post("/predictions/bulk")
 def create_bulk_predictions(
     predictions_data: List[dict], 
@@ -92,20 +100,34 @@ def create_bulk_predictions(
     # En una versión final, el frontend enviaría el group_id real.
     
     for item in predictions_data:
-        # Convertir strings a UUIDs y asignar el usuario actual
         match_id = uuid.UUID(item["match_id"])
+        group_id = uuid.UUID(item.get("group_id", "00000000-0000-0000-0000-000000000000"))
         
-        # Buscar si ya existe una predicción para este usuario/partido/grupo
-        # (Para simplificar el prototipo, permitiremos múltiples por ahora o actualizaremos)
-        
-        prediction = Prediction(
-            user_id=current_user.id,
-            match_id=match_id,
-            group_id=uuid.UUID(item.get("group_id", "00000000-0000-0000-0000-000000000000")),
-            predicted_goals1=item["predicted_goals1"],
-            predicted_goals2=item["predicted_goals2"]
-        )
-        session.add(prediction)
+        # Buscar si ya existe una predicción para este usuario y partido
+        existing_prediction = session.exec(
+            select(Prediction).where(
+                Prediction.user_id == current_user.id,
+                Prediction.match_id == match_id,
+                Prediction.group_id == group_id
+            )
+        ).first()
+
+        if existing_prediction:
+            # Actualizar la existente
+            existing_prediction.predicted_goals1 = item["predicted_goals1"]
+            existing_prediction.predicted_goals2 = item["predicted_goals2"]
+            existing_prediction.updated_at = datetime.utcnow()
+            session.add(existing_prediction)
+        else:
+            # Crear una nueva
+            prediction = Prediction(
+                user_id=current_user.id,
+                match_id=match_id,
+                group_id=group_id,
+                predicted_goals1=item["predicted_goals1"],
+                predicted_goals2=item["predicted_goals2"]
+            )
+            session.add(prediction)
     
     session.commit()
     return {"status": "success", "count": len(predictions_data)}

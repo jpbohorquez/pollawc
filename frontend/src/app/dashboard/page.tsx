@@ -29,29 +29,46 @@ export default function Dashboard() {
   const router = useRouter();
 
   useEffect(() => {
-    const fetchMatches = async () => {
+    const fetchData = async () => {
       try {
-        const data = await apiFetch("/matches");
-        // Ordenar por fecha
-        const sorted = data.sort((a: Match, b: Match) => 
+        const [matchesData, predsData] = await Promise.all([
+          apiFetch("/matches"),
+          apiFetch("/predictions/my")
+        ]);
+
+        // Ordenar partidos por fecha
+        const sortedMatches = matchesData.sort((a: Match, b: Match) => 
           new Date(a.start_at).getTime() - new Date(b.start_at).getTime()
         );
-        setMatches(sorted);
+        setMatches(sortedMatches);
         
-        // Inicializar estado de predicciones
+        // Inicializar estado de predicciones con datos existentes o vacíos
         const initialPreds: PredictionState = {};
-        data.forEach((m: Match) => {
+        
+        // Primero inicializar todo en vacío para asegurar que todos los matchIds existan
+        sortedMatches.forEach((m: Match) => {
           initialPreds[m.id] = { goals1: "", goals2: "" };
         });
+
+        // Luego sobreescribir con las predicciones guardadas
+        predsData.forEach((p: any) => {
+          if (initialPreds[p.match_id]) {
+            initialPreds[p.match_id] = { 
+              goals1: p.predicted_goals1.toString(), 
+              goals2: p.predicted_goals2.toString() 
+            };
+          }
+        });
+
         setPredictions(initialPreds);
       } catch (err) {
-        console.error("Error fetching matches", err);
+        console.error("Error fetching dashboard data", err);
         router.push("/login");
       } finally {
         setLoading(false);
       }
     };
-    fetchMatches();
+    fetchData();
   }, [router]);
 
   const handleInputChange = (matchId: string, team: 1 | 2, value: string) => {
