@@ -54,6 +54,19 @@ export default function GroupConfigPage({ params }: { params: Promise<{ id: stri
     }
   };
 
+  const handleDelete = async () => {
+    if (!confirm("¿Estás seguro de que quieres eliminar este grupo? Todos los pronósticos y configuraciones se perderán permanentemente.")) return;
+    
+    setSaving(true);
+    try {
+      await apiFetch(`/groups/${id}`, { method: "DELETE" });
+      router.push("/groups");
+    } catch (err: any) {
+      setMessage(`❌ Error al eliminar: ${err.message}`);
+      setSaving(false);
+    }
+  };
+
   if (loading) return <div className="p-8 text-center text-green-700 font-bold">Cargando reglas...</div>;
   if (!config) return <div className="p-8 text-center text-red-500 font-bold">{message || "No se pudo cargar la configuración"}</div>;
 
@@ -104,9 +117,9 @@ export default function GroupConfigPage({ params }: { params: Promise<{ id: stri
           </div>
         </section>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <p className="text-xs text-gray-500 mb-4 italic">
-            * Nota: Solo el creador del grupo puede guardar cambios en estas reglas.
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+          <p className="text-xs text-gray-500 italic">
+            * Nota: Solo el creador del grupo puede guardar cambios o eliminar el grupo.
           </p>
           <button
             type="submit"
@@ -115,6 +128,17 @@ export default function GroupConfigPage({ params }: { params: Promise<{ id: stri
           >
             {saving ? "Guardando..." : "Guardar Configuración"}
           </button>
+          
+          <div className="pt-6 mt-6 border-t border-gray-100 text-center">
+             <button
+                type="button"
+                onClick={handleDelete}
+                disabled={saving}
+                className="text-red-500 font-bold hover:underline text-sm"
+              >
+                Eliminar Grupo Definitivamente
+             </button>
+          </div>
         </div>
       </form>
     </div>

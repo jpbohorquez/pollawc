@@ -69,6 +69,17 @@ export default function GroupsPage() {
     }
   };
 
+  const handleLeaveGroup = async (groupId: string) => {
+    if (!confirm("¿Estás seguro de abandonar este grupo? No podrás verlo más, aunque tus pronósticos seguirán exist guardados.")) return;
+    try {
+      await apiFetch(`/groups/${groupId}/leave`, { method: "POST" });
+      setMessage("✅ Has abandonado el grupo");
+      fetchGroups();
+    } catch (err: any) {
+      setMessage(`❌ Error al abandonar: ${err.message}`);
+    }
+  };
+
   if (loading) return <div className="p-8 text-center text-green-700 font-bold">Cargando grupos...</div>;
 
   return (
@@ -91,12 +102,21 @@ export default function GroupsPage() {
           </div>
         ) : (
           groups.map((group) => (
-            <div key={group.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center">
-              <div>
-                <h3 className="font-bold text-gray-800 text-lg">{group.name}</h3>
-                <p className="text-xs text-gray-500 font-mono mt-1">Código: <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-700 font-bold">{group.invite_code}</span></p>
+            <div key={group.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h3 className="font-bold text-gray-800 text-lg">{group.name}</h3>
+                  <p className="text-xs text-gray-500 font-mono mt-1">Código: <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-700 font-bold">{group.invite_code}</span></p>
+                </div>
+                <button 
+                  onClick={() => handleLeaveGroup(group.id)} 
+                  className="text-[10px] text-gray-400 hover:text-red-500 uppercase tracking-widest font-bold"
+                  title="Abandonar grupo"
+                >
+                  SALIR
+                </button>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 justify-end">
                 <Link 
                   href={`/groups/${group.id}/ranking`} 
                   className="p-2 bg-yellow-50 rounded-lg text-yellow-600 hover:text-yellow-700 transition"
@@ -113,7 +133,7 @@ export default function GroupsPage() {
                 </Link>
                 <Link 
                   href={`/groups/${group.id}/dashboard`} 
-                  className="p-2 bg-green-600 rounded-lg text-white font-bold px-4 text-xs flex items-center"
+                  className="flex-1 text-center p-2 bg-green-600 rounded-lg text-white font-bold px-4 text-sm"
                 >
                   Jugar
                 </Link>

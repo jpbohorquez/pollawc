@@ -139,12 +139,14 @@ export default function GroupDashboard({ params }: { params: Promise<{ id: strin
   return (
     <div className="min-h-screen bg-gray-100 pb-24 font-sans">
       <header className="bg-green-700 text-white p-4 sticky top-0 z-10 shadow-md flex items-center justify-between">
-        <Link href="/groups" className="text-white font-bold">← Grupos</Link>
-        <div className="text-center flex-1">
+        <Link href="/groups" className="text-white font-bold w-16">← Volver</Link>
+        <div className="text-center flex-1 min-w-0 px-2">
             <h1 className="text-lg font-bold truncate">{groupName || "Mis Pronósticos"}</h1>
             <p className="text-[10px] uppercase tracking-widest opacity-80">Ingreso de Marcadores</p>
         </div>
-        <div className="w-12"></div>
+        <Link href="/onboarding" className="w-16 text-right text-xs font-bold text-green-200 hover:text-white transition">
+            ¿Ayuda?
+        </Link>
       </header>
 
       <div className="max-w-md mx-auto p-4 space-y-4">

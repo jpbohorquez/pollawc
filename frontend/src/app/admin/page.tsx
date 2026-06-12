@@ -80,6 +80,21 @@ export default function AdminPage() {
     }
   };
 
+  const handleRevertResult = async (matchId: string) => {
+    if (!confirm("¿Seguro que deseas anular el resultado? Esto recalculará y restará puntos a los usuarios.")) return;
+    try {
+      await apiFetch(`/admin/matches/${matchId}/results`, {
+        method: "POST",
+        body: JSON.stringify({ actual_goals1: null, actual_goals2: null, is_finished: false }),
+      });
+      setMessage("✅ Resultado anulado. Puntos recalculados.");
+      const data = await apiFetch("/matches");
+      setMatches(data.sort((a: Match, b: Match) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime()));
+    } catch (err: any) {
+      setMessage(`❌ Error al anular: ${err.message}`);
+    }
+  };
+
   if (loading) return <div className="p-8 text-center font-bold">Verificando credenciales admin...</div>;
   if (!isAdmin) return null;
 
@@ -139,16 +154,28 @@ export default function AdminPage() {
               <div className="flex-1 text-left font-bold truncate">{m.team2}</div>
             </div>
 
-            <button 
-              onClick={() => {
-                const g1 = (document.getElementById(`g1-${m.id}`) as HTMLInputElement).value;
-                const g2 = (document.getElementById(`g2-${m.id}`) as HTMLInputElement).value;
-                if (g1 !== "" && g2 !== "") handleUpdateResult(m.id, parseInt(g1), parseInt(g2));
-              }}
-              className={`w-full py-2 rounded-xl text-xs font-black tracking-widest transition shadow-md active:scale-95 ${m.is_finished ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-red-600 hover:bg-red-700 text-white"}`}
-            >
-              {m.is_finished ? "ACTUALIZAR RESULTADO" : "FINALIZAR PARTIDO"}
-            </button>
+            <div className="flex gap-2">
+                <button 
+                onClick={() => {
+                    const g1 = (document.getElementById(`g1-${m.id}`) as HTMLInputElement).value;
+                    const g2 = (document.getElementById(`g2-${m.id}`) as HTMLInputElement).value;
+                    if (g1 !== "" && g2 !== "") handleUpdateResult(m.id, parseInt(g1), parseInt(g2));
+                }}
+                className={`flex-1 py-3 rounded-xl text-xs font-black tracking-widest transition shadow-md active:scale-95 ${m.is_finished ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-red-600 hover:bg-red-700 text-white"}`}
+                >
+                {m.is_finished ? "ACTUALIZAR" : "FINALIZAR PARTIDO"}
+                </button>
+
+                {m.is_finished && (
+                    <button
+                        onClick={() => handleRevertResult(m.id)}
+                        className="py-3 px-4 rounded-xl text-xs font-black tracking-widest bg-gray-700 hover:bg-gray-600 text-gray-300 transition"
+                        title="Deshacer finalización"
+                    >
+                        ↩️
+                    </button>
+                )}
+            </div>
           </div>
         ))}
       </div>

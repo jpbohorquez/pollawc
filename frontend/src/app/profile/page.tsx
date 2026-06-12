@@ -11,6 +11,7 @@ export default function ProfilePage() {
     email: "",
     full_name: "",
     avatar_url: "",
+    is_superuser: false,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -26,6 +27,7 @@ export default function ProfilePage() {
           email: data.email,
           full_name: data.full_name || "",
           avatar_url: data.avatar_url || "",
+          is_superuser: data.is_superuser || false,
         });
       } catch (err) {
         router.push("/login");
@@ -127,6 +129,14 @@ export default function ProfilePage() {
         </button>
       </form>
       
+      {profile.is_superuser && (
+        <div className="mt-6">
+          <Link href="/admin" className="block w-full bg-gray-800 text-white font-bold py-3 rounded-xl text-center shadow-lg hover:bg-gray-900 transition">
+            👑 Panel de Administración
+          </Link>
+        </div>
+      )}
+
       <div className="mt-8 text-center">
         <button 
           onClick={() => { localStorage.removeItem("token"); router.push("/login"); }}
