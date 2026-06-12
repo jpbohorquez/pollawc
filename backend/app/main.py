@@ -7,7 +7,7 @@ from app.services.scoring import calculate_points
 from app.core.security import get_password_hash, verify_password, create_access_token
 from typing import List
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test.db")
@@ -76,6 +76,77 @@ async def get_current_user(token: str = Depends(oauth2_scheme), session: Session
     if user is None:
         raise credentials_exception
     return user
+
+from app.schemas.user import UserProfileUpdate, UserRead, ForgotPasswordRequest, ResetPasswordRequest
+import secrets
+
+# ... (código existente)
+
+@app.get("/users/me", response_model=UserRead)
+def get_user_me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+@app.put("/users/me", response_model=UserRead)
+def update_user_me(
+    user_update: UserProfileUpdate, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    if user_update.full_name is not None:
+        current_user.full_name = user_update.full_name
+    if user_update.email is not None:
+        # Verificar si el email ya existe en otro usuario
+        existing = session.exec(select(User).where(User.email == user_update.email, User.id != current_user.id)).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Email already in use")
+        current_user.email = user_update.email
+    if user_update.avatar_url is not None:
+        current_user.avatar_url = user_update.avatar_url
+    
+    session.add(current_user)
+    session.commit()
+    session.refresh(current_user)
+    return current_user
+
+@app.post("/forgot-password")
+def forgot_password(request: ForgotPasswordRequest, session: Session = Depends(get_session)):
+    user = session.exec(select(User).where(User.email == request.email)).first()
+    if not user:
+        # Por seguridad, no revelamos si el email existe
+        return {"message": "Si el correo está registrado, recibirás un código de recuperación."}
+    
+    token = secrets.token_urlsafe(32)
+    user.reset_token = token
+    user.reset_token_expires = datetime.utcnow() + timedelta(hours=1)
+    
+    session.add(user)
+    session.commit()
+    
+    # SIMULACIÓN DE ENVÍO DE CORREO
+    print(f"\n[EMAIL SIMULATION] Para: {user.email}")
+    print(f"[EMAIL SIMULATION] Tu token de recuperación es: {token}\n")
+    
+    return {"message": "Si el correo está registrado, recibirás un código de recuperación."}
+
+@app.post("/reset-password")
+def reset_password(request: ResetPasswordRequest, session: Session = Depends(get_session)):
+    user = session.exec(
+        select(User).where(
+            User.reset_token == request.token, 
+            User.reset_token_expires > datetime.utcnow()
+        )
+    ).first()
+    
+    if not user:
+        raise HTTPException(status_code=400, detail="Token inválido o expirado")
+    
+    user.hashed_password = get_password_hash(request.new_password)
+    user.reset_token = None
+    user.reset_token_expires = None
+    
+    session.add(user)
+    session.commit()
+    return {"message": "Contraseña actualizada exitosamente"}
 
 @app.get("/matches", response_model=List[Match])
 def get_matches(session: Session = Depends(get_session)):

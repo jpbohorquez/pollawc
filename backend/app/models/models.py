@@ -17,6 +17,10 @@ class User(SQLModel, table=True):
     full_name: Optional[str] = None
     avatar_url: Optional[str] = None
     
+    # Reset Password Fields
+    reset_token: Optional[str] = None
+    reset_token_expires: Optional[datetime] = None
+    
     predictions: List["Prediction"] = Relationship(back_populates="user")
 
 class Group(SQLModel, table=True):

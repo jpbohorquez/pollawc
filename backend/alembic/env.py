@@ -21,7 +21,7 @@ if config.config_file_name is not None:
 target_metadata = SQLModel.metadata
 
 def get_url():
-    return os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost/pollawc")
+    return os.getenv("DATABASE_URL", "sqlite:///./test.db")
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
