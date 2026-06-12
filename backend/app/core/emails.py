@@ -1,30 +1,20 @@
 import os
-from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
-from pydantic import EmailStr
-
-def get_mail_config():
-    return ConnectionConfig(
-        MAIL_USERNAME=os.getenv("SMTP_USER", "dummy"),
-        MAIL_PASSWORD=os.getenv("SMTP_PASSWORD", "dummy"),
-        MAIL_FROM=os.getenv("EMAILS_FROM_EMAIL", "onboarding@resend.dev"),
-        MAIL_PORT=int(os.getenv("SMTP_PORT", 465)),
-        MAIL_SERVER=os.getenv("SMTP_HOST", "smtp.dummy.com"),
-        MAIL_FROM_NAME=os.getenv("EMAILS_FROM_NAME", "Polla WC26"),
-        MAIL_STARTTLS=False,
-        MAIL_SSL_TLS=True,
-        USE_CREDENTIALS=True,
-        VALIDATE_CERTS=True
-    )
+import smtplib
+from email.message import EmailMessage
 
 async def send_reset_password_email(email_to: str, token: str):
     """
-    Envía un correo con el token de recuperación de contraseña.
+    Envía un correo con el token de recuperación de contraseña usando smtplib.
     En este modo 'interno', el correo siempre se envía al ADMIN_EMAIL, 
     especificando qué usuario lo solicitó.
     """
-    # Se obtienen las variables de entorno en el momento de la ejecución
-    admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
-    
+    admin_email = os.getenv("ADMIN_EMAIL", "juanbohorquez11@gmail.com")
+    from_email = os.getenv("EMAILS_FROM_EMAIL", "onboarding@resend.dev")
+    smtp_host = os.getenv("SMTP_HOST", "smtp.resend.com")
+    smtp_port = int(os.getenv("SMTP_PORT", 465))
+    smtp_user = os.getenv("SMTP_USER", "resend")
+    smtp_password = os.getenv("SMTP_PASSWORD", "")
+
     html_content = f"""
     <div style="font-family: Arial, sans-serif; max-w-md: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
         <h2 style="color: #15803d; text-align: center;">Polla WC26 - Recuperación (Modo Interno)</h2>
@@ -38,16 +28,29 @@ async def send_reset_password_email(email_to: str, token: str):
     </div>
     """
 
-    message = MessageSchema(
-        subject=f"Token de Recuperación para: {email_to}",
-        recipients=[admin_email],
-        body=html_content,
-        subtype=MessageType.html
-    )
+    msg = EmailMessage()
+    msg.set_content("Tu cliente de correo no soporta HTML.")
+    msg.add_alternative(html_content, subtype='html')
+    
+    msg['Subject'] = f"Token de Recuperación para: {email_to}"
+    msg['From'] = from_email
+    msg['To'] = admin_email
 
     try:
-        fm = FastMail(get_mail_config())
-        await fm.send_message(message)
+        if not smtp_password or smtp_password == "dummy":
+            print(f"[EMAIL SIMULATION] Correo simulado a {admin_email}. Token: {token}")
+            return
+
+        # Si el puerto es 465, usar SMTP_SSL. Si es 587, usar starttls.
+        if smtp_port == 465:
+            server = smtplib.SMTP_SSL(smtp_host, smtp_port)
+        else:
+            server = smtplib.SMTP(smtp_host, smtp_port)
+            server.starttls()
+            
+        server.login(smtp_user, smtp_password)
+        server.send_message(msg)
+        server.quit()
         print(f"[EMAIL SUCCESS] Correo de recuperación de {email_to} redirigido al admin ({admin_email})")
     except Exception as e:
         print(f"[EMAIL ERROR] Fallo al enviar correo redirigido de {email_to}: {str(e)}")
