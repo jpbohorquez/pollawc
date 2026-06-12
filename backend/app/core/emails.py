@@ -2,7 +2,7 @@ import os
 import smtplib
 from email.message import EmailMessage
 
-async def send_reset_password_email(email_to: str, token: str):
+def send_reset_password_email(email_to: str, token: str):
     """
     Envía un correo con el token de recuperación de contraseña usando smtplib.
     En este modo 'interno', el correo siempre se envía al ADMIN_EMAIL, 
