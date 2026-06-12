@@ -55,12 +55,13 @@ export default function GroupDashboard({ params }: { params: Promise<{ id: strin
         
         const initialPreds: PredictionState = {};
         sortedMatches.forEach((m: Match) => {
-          initialPreds[m.id] = { goals1: "", goals2: "" };
+          initialPreds[m.id.toLowerCase()] = { goals1: "", goals2: "" };
         });
 
         predsData.forEach((p: any) => {
-          if (initialPreds[p.match_id]) {
-            initialPreds[p.match_id] = { 
+          const matchIdStr = String(p.match_id).toLowerCase();
+          if (initialPreds[matchIdStr]) {
+            initialPreds[matchIdStr] = { 
               goals1: p.predicted_goals1.toString(), 
               goals2: p.predicted_goals2.toString(),
               points_earned: p.points_earned,

@@ -56,9 +56,9 @@ export default function AdminPage() {
         body: JSON.stringify({ actual_goals1: g1, actual_goals2: g2, is_finished: true }),
       });
       setMessage("✅ Resultado actualizado y puntos calculados");
-      // Refrescar lista
+      // Refrescar lista con orden ascendente correcto
       const data = await apiFetch("/matches");
-      setMatches(data.sort((a: Match, b: Match) => new Date(b.start_at).getTime() - new Date(a.start_at).getTime()));
+      setMatches(data.sort((a: Match, b: Match) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime()));
     } catch (err: any) {
       setMessage(`❌ Error: ${err.message}`);
     }
@@ -74,7 +74,7 @@ export default function AdminPage() {
       setShowAddMatch(false);
       setMessage("✅ Nuevo partido agregado al fixture");
       const data = await apiFetch("/matches");
-      setMatches(data.sort((a: Match, b: Match) => new Date(b.start_at).getTime() - new Date(a.start_at).getTime()));
+      setMatches(data.sort((a: Match, b: Match) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime()));
     } catch (err: any) {
       setMessage(`❌ Error: ${err.message}`);
     }
@@ -145,7 +145,7 @@ export default function AdminPage() {
                 const g2 = (document.getElementById(`g2-${m.id}`) as HTMLInputElement).value;
                 if (g1 !== "" && g2 !== "") handleUpdateResult(m.id, parseInt(g1), parseInt(g2));
               }}
-              className={`w-full py-2 rounded-xl text-xs font-black tracking-widest transition ${m.is_finished ? "bg-gray-700 text-gray-400" : "bg-red-600 hover:bg-red-700 text-white"}`}
+              className={`w-full py-2 rounded-xl text-xs font-black tracking-widest transition shadow-md active:scale-95 ${m.is_finished ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-red-600 hover:bg-red-700 text-white"}`}
             >
               {m.is_finished ? "ACTUALIZAR RESULTADO" : "FINALIZAR PARTIDO"}
             </button>
