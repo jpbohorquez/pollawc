@@ -30,7 +30,7 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center p-6 max-w-md mx-auto">
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-center p-6 max-w-lg mx-auto">
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold text-green-700">Nueva Contraseña</h1>
         <p className="text-gray-600 mt-2 text-sm">Ingresa el código que recibiste y tu nueva clave</p>

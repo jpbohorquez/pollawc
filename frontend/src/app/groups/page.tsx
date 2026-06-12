@@ -143,7 +143,7 @@ export default function GroupsPage() {
         )}
       </div>
 
-      <div className="fixed bottom-6 left-6 right-6 flex gap-3 max-w-md mx-auto">
+      <div className="fixed bottom-6 left-6 right-6 flex gap-3 max-w-xl mx-auto">
         <button 
           onClick={() => { setShowJoin(true); setShowCreate(false); }}
           className="flex-1 bg-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition"

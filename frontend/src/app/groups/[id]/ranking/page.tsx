@@ -44,7 +44,7 @@ export default function GroupRankingPage({ params }: { params: Promise<{ id: str
   if (!data) return <div className="p-8 text-center text-red-500 font-bold">{message || "No se pudo cargar el ranking"}</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 max-w-md mx-auto">
+    <div className="min-h-screen bg-gray-50 p-6 max-w-xl mx-auto">
       <header className="flex items-center gap-4 mb-8">
         <Link href="/groups" className="text-green-700 font-bold">← Volver</Link>
         <h1 className="text-2xl font-bold text-gray-800">Ranking del Grupo</h1>

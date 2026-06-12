@@ -9,7 +9,9 @@ from app.services.scoring import calculate_points
 from app.core.security import get_password_hash, verify_password, create_access_token
 from typing import List
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+
+# ... (rest of imports)
 from uuid import UUID
 import uuid
 
@@ -376,12 +378,15 @@ def create_bulk_predictions(
         match_id = uuid.UUID(item["match_id"])
         group_id = uuid.UUID(item["group_id"])
         
-        # REGLA DE BLOQUEO CRÍTICA: Verificar hora del servidor
+        # REGLA DE BLOQUEO CRÍTICA: Verificar hora GMT-5 (Colombia/Ecuador)
         match = session.get(Match, match_id)
         if not match:
             continue
             
-        time_diff = match.start_at - datetime.utcnow()
+        # El fixture está en GMT-5, convertimos la hora UTC actual a GMT-5 para comparar
+        now_gmt5 = datetime.now(timezone(timedelta(hours=-5))).replace(tzinfo=None)
+        time_diff = match.start_at - now_gmt5
+        
         if time_diff.total_seconds() < 300: # 5 minutos = 300 segundos
             # Si falta menos de 5 min o ya empezó, ignoramos este item
             continue

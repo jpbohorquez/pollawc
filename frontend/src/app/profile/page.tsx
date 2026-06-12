@@ -62,7 +62,7 @@ export default function ProfilePage() {
   if (loading) return <div className="p-8 text-center text-green-700 font-bold">Cargando perfil...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 max-w-md mx-auto">
+    <div className="min-h-screen bg-gray-50 p-6 max-w-lg mx-auto">
       <header className="flex items-center gap-4 mb-8">
         <Link href="/groups" className="text-green-700 font-bold">← Volver</Link>
         <h1 className="text-2xl font-bold text-gray-800">Mi Perfil</h1>

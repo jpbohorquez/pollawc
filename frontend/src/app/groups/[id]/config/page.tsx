@@ -86,7 +86,7 @@ export default function GroupConfigPage({ params }: { params: Promise<{ id: stri
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 max-w-md mx-auto">
+    <div className="min-h-screen bg-gray-50 p-6 max-w-xl mx-auto">
       <header className="flex items-center gap-4 mb-8">
         <Link href="/groups" className="text-green-700 font-bold">← Volver</Link>
         <h1 className="text-xl font-bold text-gray-800">Reglas de Puntuación</h1>
