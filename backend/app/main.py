@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session, create_engine, select
 from app.models.models import Match, Group, Prediction, User, SQLModel
 from app.services.scoring import calculate_points
@@ -17,6 +18,15 @@ def get_session():
         yield session
 
 app = FastAPI(title="Polla WC26 API")
+
+# Configurar CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # En producción se debe restringir a los dominios del frontend
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.post("/register")
 def register(user_data: User, session: Session = Depends(get_session)):
