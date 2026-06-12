@@ -98,6 +98,13 @@ export default function GroupsPage() {
               </div>
               <div className="flex gap-2">
                 <Link 
+                  href={`/groups/${group.id}/ranking`} 
+                  className="p-2 bg-yellow-50 rounded-lg text-yellow-600 hover:text-yellow-700 transition"
+                  title="Ranking"
+                >
+                  🏆
+                </Link>
+                <Link 
                   href={`/groups/${group.id}/config`} 
                   className="p-2 bg-gray-50 rounded-lg text-gray-400 hover:text-green-600 transition"
                   title="Configuración"
