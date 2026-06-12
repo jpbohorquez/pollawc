@@ -20,5 +20,5 @@ COPY . .
 ENV PYTHONPATH=/backend
 ENV PORT=8000
 
-# Run the application
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]
+# Run the application (applying database migrations first)
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]
