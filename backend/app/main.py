@@ -114,8 +114,13 @@ def update_user_me(
     session.refresh(current_user)
     return current_user
 
+from app.core.emails import send_reset_password_email
+from fastapi import BackgroundTasks
+
+# ... (código existente)
+
 @app.post("/forgot-password")
-def forgot_password(request: ForgotPasswordRequest, session: Session = Depends(get_session)):
+async def forgot_password(request: ForgotPasswordRequest, background_tasks: BackgroundTasks, session: Session = Depends(get_session)):
     user = session.exec(select(User).where(User.email == request.email)).first()
     if not user:
         # Por seguridad, no revelamos si el email existe
@@ -128,9 +133,8 @@ def forgot_password(request: ForgotPasswordRequest, session: Session = Depends(g
     session.add(user)
     session.commit()
     
-    # SIMULACIÓN DE ENVÍO DE CORREO
-    print(f"\n[EMAIL SIMULATION] Para: {user.email}")
-    print(f"[EMAIL SIMULATION] Tu token de recuperación es: {token}\n")
+    # Enviar correo en segundo plano
+    background_tasks.add_task(send_reset_password_email, user.email, token)
     
     return {"message": "Si el correo está registrado, recibirás un código de recuperación."}
 

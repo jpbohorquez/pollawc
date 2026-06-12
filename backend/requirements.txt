@@ -11,3 +11,4 @@ openpyxl
 alembic
 pydantic-settings
 email-validator
+fastapi-mail
