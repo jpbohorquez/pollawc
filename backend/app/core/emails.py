@@ -2,20 +2,19 @@ import os
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 from pydantic import EmailStr
 
-# Configuración SMTP desde variables de entorno
-# Si no existen, se usan valores dummy para evitar crashes en desarrollo local
-conf = ConnectionConfig(
-    MAIL_USERNAME=os.getenv("SMTP_USER", "dummy"),
-    MAIL_PASSWORD=os.getenv("SMTP_PASSWORD", "dummy"),
-    MAIL_FROM=os.getenv("EMAILS_FROM_EMAIL", "soporte@pollawc26.com"),
-    MAIL_PORT=int(os.getenv("SMTP_PORT", 465)),
-    MAIL_SERVER=os.getenv("SMTP_HOST", "smtp.dummy.com"),
-    MAIL_FROM_NAME=os.getenv("EMAILS_FROM_NAME", "Polla WC26"),
-    MAIL_STARTTLS=False,
-    MAIL_SSL_TLS=True,
-    USE_CREDENTIALS=True,
-    VALIDATE_CERTS=True
-)
+def get_mail_config():
+    return ConnectionConfig(
+        MAIL_USERNAME=os.getenv("SMTP_USER", "dummy"),
+        MAIL_PASSWORD=os.getenv("SMTP_PASSWORD", "dummy"),
+        MAIL_FROM=os.getenv("EMAILS_FROM_EMAIL", "onboarding@resend.dev"),
+        MAIL_PORT=int(os.getenv("SMTP_PORT", 465)),
+        MAIL_SERVER=os.getenv("SMTP_HOST", "smtp.dummy.com"),
+        MAIL_FROM_NAME=os.getenv("EMAILS_FROM_NAME", "Polla WC26"),
+        MAIL_STARTTLS=False,
+        MAIL_SSL_TLS=True,
+        USE_CREDENTIALS=True,
+        VALIDATE_CERTS=True
+    )
 
 async def send_reset_password_email(email_to: str, token: str):
     """
@@ -23,7 +22,8 @@ async def send_reset_password_email(email_to: str, token: str):
     En este modo 'interno', el correo siempre se envía al ADMIN_EMAIL, 
     especificando qué usuario lo solicitó.
     """
-    admin_email = os.getenv("ADMIN_EMAIL", os.getenv("SMTP_USER", "admin@example.com"))
+    # Se obtienen las variables de entorno en el momento de la ejecución
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
     
     html_content = f"""
     <div style="font-family: Arial, sans-serif; max-w-md: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
@@ -40,13 +40,13 @@ async def send_reset_password_email(email_to: str, token: str):
 
     message = MessageSchema(
         subject=f"Token de Recuperación para: {email_to}",
-        recipients=[admin_email], # Siempre se envía al admin
+        recipients=[admin_email],
         body=html_content,
         subtype=MessageType.html
     )
 
     try:
-        fm = FastMail(conf)
+        fm = FastMail(get_mail_config())
         await fm.send_message(message)
         print(f"[EMAIL SUCCESS] Correo de recuperación de {email_to} redirigido al admin ({admin_email})")
     except Exception as e:
