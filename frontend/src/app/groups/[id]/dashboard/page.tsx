@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { apiFetch } from "@/services/api";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 interface Match {
   id: string;
@@ -20,9 +21,11 @@ interface PredictionState {
   };
 }
 
-export default function Dashboard() {
+export default function GroupDashboard({ params }: { params: Promise<{ id: string }> }) {
+  const { id: groupId } = use(params);
   const [matches, setMatches] = useState<Match[]>([]);
   const [predictions, setPredictions] = useState<PredictionState>({});
+  const [groupName, setGroupName] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -31,26 +34,26 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Obtener info del grupo para el título
+        const groups = await apiFetch("/groups");
+        const currentGroup = groups.find((g: any) => g.id === groupId);
+        if (currentGroup) setGroupName(currentGroup.name);
+
         const [matchesData, predsData] = await Promise.all([
           apiFetch("/matches"),
-          apiFetch("/predictions/my")
+          apiFetch(`/groups/${groupId}/predictions/my`)
         ]);
 
-        // Ordenar partidos por fecha
         const sortedMatches = matchesData.sort((a: Match, b: Match) => 
           new Date(a.start_at).getTime() - new Date(b.start_at).getTime()
         );
         setMatches(sortedMatches);
         
-        // Inicializar estado de predicciones con datos existentes o vacíos
         const initialPreds: PredictionState = {};
-        
-        // Primero inicializar todo en vacío para asegurar que todos los matchIds existan
         sortedMatches.forEach((m: Match) => {
           initialPreds[m.id] = { goals1: "", goals2: "" };
         });
 
-        // Luego sobreescribir con las predicciones guardadas
         predsData.forEach((p: any) => {
           if (initialPreds[p.match_id]) {
             initialPreds[p.match_id] = { 
@@ -63,13 +66,13 @@ export default function Dashboard() {
         setPredictions(initialPreds);
       } catch (err) {
         console.error("Error fetching dashboard data", err);
-        router.push("/login");
+        router.push("/groups");
       } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, [router]);
+  }, [groupId, router]);
 
   const handleInputChange = (matchId: string, team: 1 | 2, value: string) => {
     setPredictions(prev => ({
@@ -92,23 +95,20 @@ export default function Dashboard() {
     setSaving(true);
     setMessage("");
     try {
-      // Filtrar solo las que tienen datos y no están bloqueadas
       const toSave = Object.entries(predictions)
-        .filter(([id, data]) => {
-          const match = matches.find(m => m.id === id);
+        .filter(([matchId, data]) => {
+          const match = matches.find(m => m.id === matchId);
           return data.goals1 !== "" && data.goals2 !== "" && match && !isLocked(match.start_at);
         })
-        .map(([id, data]) => ({
-          match_id: id,
+        .map(([matchId, data]) => ({
+          match_id: matchId,
+          group_id: groupId,
           predicted_goals1: parseInt(data.goals1),
           predicted_goals2: parseInt(data.goals2),
-          // Estos campos se deben manejar con el user_id real del token en el backend
-          user_id: "00000000-0000-0000-0000-000000000000", 
-          group_id: "00000000-0000-0000-0000-000000000000"
         }));
 
       if (toSave.length === 0) {
-        setMessage("No hay nuevos marcadores válidos para guardar.");
+        setMessage("No hay marcadores válidos para guardar.");
         setSaving(false);
         return;
       }
@@ -117,7 +117,7 @@ export default function Dashboard() {
         method: "POST",
         body: JSON.stringify(toSave),
       });
-      setMessage("✅ ¡Marcadores guardados exitosamente!");
+      setMessage("✅ ¡Marcadores guardados en este grupo!");
     } catch (err) {
       setMessage("❌ Error al guardar. Intenta de nuevo.");
     } finally {
@@ -125,12 +125,17 @@ export default function Dashboard() {
     }
   };
 
-  if (loading) return <div className="p-8 text-center text-green-700 font-bold">Cargando partidos...</div>;
+  if (loading) return <div className="p-8 text-center text-green-700 font-bold">Cargando polla...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-100 pb-24">
-      <header className="bg-green-700 text-white p-4 sticky top-0 z-10 shadow-md">
-        <h1 className="text-xl font-bold text-center">Mis Pronósticos</h1>
+    <div className="min-h-screen bg-gray-100 pb-24 font-sans">
+      <header className="bg-green-700 text-white p-4 sticky top-0 z-10 shadow-md flex items-center justify-between">
+        <Link href="/groups" className="text-white font-bold">← Grupos</Link>
+        <div className="text-center flex-1">
+            <h1 className="text-lg font-bold truncate">{groupName || "Mis Pronósticos"}</h1>
+            <p className="text-[10px] uppercase tracking-widest opacity-80">Ingreso de Marcadores</p>
+        </div>
+        <div className="w-12"></div> {/* Spacer for alignment */}
       </header>
 
       <div className="max-w-md mx-auto p-4 space-y-4">
@@ -143,39 +148,39 @@ export default function Dashboard() {
         {matches.map((match) => {
           const locked = isLocked(match.start_at);
           return (
-            <div key={match.id} className={`bg-white rounded-xl shadow-sm p-4 border ${locked ? "opacity-75 border-gray-200" : "border-transparent"}`}>
-              <div className="flex justify-between text-[10px] text-gray-500 mb-2 uppercase font-bold tracking-wider">
+            <div key={match.id} className={`bg-white rounded-2xl shadow-sm p-4 border ${locked ? "opacity-75 border-gray-200" : "border-transparent hover:border-green-200 transition-colors"}`}>
+              <div className="flex justify-between text-[10px] text-gray-400 mb-3 uppercase font-bold tracking-wider">
                 <span>{match.phase === 'group' ? `Grupo ${match.group_name}` : match.phase}</span>
-                <span>{new Date(match.start_at).toLocaleDateString()} - {new Date(match.start_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                <span>{new Date(match.start_at).toLocaleDateString([], {day:'2-digit', month:'short'})} · {new Date(match.start_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
               </div>
               
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1 text-right font-medium text-gray-800 truncate">{match.team1}</div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex-1 text-right font-bold text-gray-700 text-sm truncate">{match.team1}</div>
                 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-xl border border-gray-100">
                   <input
                     type="number"
                     disabled={locked}
-                    className={`w-12 h-12 text-center text-xl font-bold border-2 rounded-lg outline-none transition-all ${locked ? "bg-gray-100 border-gray-200 text-gray-400" : "border-green-100 focus:border-green-500 text-green-700"}`}
+                    className={`w-11 h-11 text-center text-xl font-black rounded-lg outline-none transition-all ${locked ? "bg-gray-100 text-gray-400" : "bg-white text-green-700 focus:ring-2 focus:ring-green-500 shadow-inner"}`}
                     value={predictions[match.id]?.goals1 || ""}
                     onChange={(e) => handleInputChange(match.id, 1, e.target.value)}
                   />
-                  <span className="text-gray-300 font-bold">-</span>
+                  <span className="text-gray-300 font-bold">:</span>
                   <input
                     type="number"
                     disabled={locked}
-                    className={`w-12 h-12 text-center text-xl font-bold border-2 rounded-lg outline-none transition-all ${locked ? "bg-gray-100 border-gray-200 text-gray-400" : "border-green-100 focus:border-green-500 text-green-700"}`}
+                    className={`w-11 h-11 text-center text-xl font-black rounded-lg outline-none transition-all ${locked ? "bg-gray-100 text-gray-400" : "bg-white text-green-700 focus:ring-2 focus:ring-green-500 shadow-inner"}`}
                     value={predictions[match.id]?.goals2 || ""}
                     onChange={(e) => handleInputChange(match.id, 2, e.target.value)}
                   />
                 </div>
 
-                <div className="flex-1 text-left font-medium text-gray-800 truncate">{match.team2}</div>
+                <div className="flex-1 text-left font-bold text-gray-700 text-sm truncate">{match.team2}</div>
               </div>
               
               {locked && (
-                <div className="mt-2 text-center text-[10px] text-red-500 font-bold flex items-center justify-center gap-1">
-                  <span className="text-xs">🔒</span> Partido bloqueado (Inicia pronto o ya finalizó)
+                <div className="mt-2 text-center text-[9px] text-red-400 font-bold uppercase flex items-center justify-center gap-1">
+                  🔒 Bloqueado
                 </div>
               )}
             </div>
@@ -183,13 +188,13 @@ export default function Dashboard() {
         })}
       </div>
 
-      <footer className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t shadow-2xl flex justify-center max-w-md mx-auto">
+      <footer className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t shadow-2xl flex justify-center z-20">
         <button
           onClick={handleSave}
           disabled={saving}
-          className={`w-full max-w-xs py-4 rounded-xl font-bold text-white shadow-lg transition-all transform active:scale-95 ${saving ? "bg-gray-400" : "bg-green-600 hover:bg-green-700"}`}
+          className={`w-full max-w-md py-4 rounded-2xl font-black text-white shadow-xl transition-all transform active:scale-95 ${saving ? "bg-gray-400" : "bg-green-600 hover:bg-green-700 hover:shadow-green-200"}`}
         >
-          {saving ? "Guardando..." : "Guardar todos mis cambios"}
+          {saving ? "GUARDANDO..." : "GUARDAR CAMBIOS"}
         </button>
       </footer>
     </div>

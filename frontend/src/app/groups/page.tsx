@@ -112,8 +112,8 @@ export default function GroupsPage() {
                   ⚙️
                 </Link>
                 <Link 
-                  href="/dashboard" 
-                  className="p-2 bg-green-600 rounded-lg text-white font-bold px-4"
+                  href={`/groups/${group.id}/dashboard`} 
+                  className="p-2 bg-green-600 rounded-lg text-white font-bold px-4 text-xs flex items-center"
                 >
                   Jugar
                 </Link>

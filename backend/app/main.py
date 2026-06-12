@@ -269,12 +269,18 @@ from app.schemas.leaderboard import LeaderboardRead, LeaderboardEntry
 
 # ... (código existente)
 
-@app.get("/predictions/my")
-def get_my_predictions(
+@app.get("/groups/{group_id}/predictions/my")
+def get_my_predictions_in_group(
+    group_id: UUID,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
-    preds = session.exec(select(Prediction).where(Prediction.user_id == current_user.id)).all()
+    preds = session.exec(
+        select(Prediction).where(
+            Prediction.user_id == current_user.id,
+            Prediction.group_id == group_id
+        )
+    ).all()
     return preds
 
 @app.post("/predictions/bulk")
