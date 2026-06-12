@@ -13,6 +13,7 @@ class UserRead(BaseModel):
     email: str
     full_name: Optional[str] = None
     avatar_url: Optional[str] = None
+    is_superuser: bool
 
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
