@@ -8,6 +8,7 @@ from app.core.security import get_password_hash, verify_password, create_access_
 from typing import List
 import os
 from datetime import datetime, timedelta
+from uuid import UUID
 import uuid
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test.db")

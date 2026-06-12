@@ -1,7 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional, List
 from uuid import UUID
-from datetime import datetime
 
 class GroupCreate(BaseModel):
     name: str
