@@ -54,18 +54,61 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = D
     access_token = create_access_token(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer"}
 
+from jose import jwt
+from app.core.security import SECRET_KEY, ALGORITHM
+import uuid
+
+# ... (código anterior)
+
+async def get_current_user(token: str = Depends(oauth2_scheme), session: Session = Depends(get_session)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    user = session.exec(select(User).where(User.username == username)).first()
+    if user is None:
+        raise credentials_exception
+    return user
+
 @app.get("/matches", response_model=List[Match])
 def get_matches(session: Session = Depends(get_session)):
     return session.exec(select(Match)).all()
 
 @app.post("/predictions/bulk")
-def create_bulk_predictions(predictions: List[Prediction], session: Session = Depends(get_session)):
-    # Nota: Aquí se debería añadir lógica de validación de tiempo (bloqueo 5 min)
-    # y verificación de usuario/grupo.
-    for pred in predictions:
-        session.add(pred)
+def create_bulk_predictions(
+    predictions_data: List[dict], 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    # Por ahora, si no hay grupos creados, usaremos un ID nulo o uno por defecto
+    # En una versión final, el frontend enviaría el group_id real.
+    
+    for item in predictions_data:
+        # Convertir strings a UUIDs y asignar el usuario actual
+        match_id = uuid.UUID(item["match_id"])
+        
+        # Buscar si ya existe una predicción para este usuario/partido/grupo
+        # (Para simplificar el prototipo, permitiremos múltiples por ahora o actualizaremos)
+        
+        prediction = Prediction(
+            user_id=current_user.id,
+            match_id=match_id,
+            group_id=uuid.UUID(item.get("group_id", "00000000-0000-0000-0000-000000000000")),
+            predicted_goals1=item["predicted_goals1"],
+            predicted_goals2=item["predicted_goals2"]
+        )
+        session.add(prediction)
+    
     session.commit()
-    return {"status": "success", "count": len(predictions)}
+    return {"status": "success", "count": len(predictions_data)}
 
 @app.get("/test-scoring")
 def test_scoring(p1: int, p2: int, a1: int, a2: int, knockout: bool = False):
