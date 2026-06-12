@@ -61,7 +61,7 @@ export default function ForgotPasswordPage() {
       </form>
 
       <div className="mt-8 text-center space-y-4">
-        <Link href="/reset-password" size="sm" className="block text-green-600 font-bold hover:underline">
+        <Link href="/reset-password" className="block text-green-600 font-bold hover:underline">
           ¿Ya tienes un código? Úsalo aquí
         </Link>
         <Link href="/login" className="block text-gray-500 text-sm hover:underline">
