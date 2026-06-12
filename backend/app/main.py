@@ -9,6 +9,11 @@ from app.services.scoring import calculate_points
 from app.core.security import get_password_hash, verify_password, create_access_token
 from typing import List
 import os
+from dotenv import load_dotenv
+
+# Cargar variables de entorno desde backend/.env.local (si existe) para desarrollo local
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env.local"))
+
 from datetime import datetime, timedelta, timezone
 
 # ... (rest of imports)
