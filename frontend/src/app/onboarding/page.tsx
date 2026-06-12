@@ -4,7 +4,7 @@ export default function Onboarding() {
   return (
     <div className="min-h-screen bg-gray-50 p-4 font-sans max-w-md mx-auto">
       <header className="py-6 text-center">
-        <h1 className="text-3xl font-bold text-green-700">Gol Predictor</h1>
+        <h1 className="text-3xl font-bold text-green-700">Polla WC26</h1>
         <p className="text-gray-600 mt-2">Guía Maestra del Mundial 2026</p>
       </header>
 
@@ -13,23 +13,51 @@ export default function Onboarding() {
           <h2 className="text-xl font-bold mb-3 flex items-center">
             <span className="mr-2">🎯</span> ¿Cómo Puntuar?
           </h2>
+          <p className="text-xs text-blue-600 font-bold mb-4 bg-blue-50 p-2 rounded">
+            💡 ¡Ojo! Los puntos valen el DOBLE a partir de la fase de eliminación directa (KO).
+          </p>
           <div className="space-y-4 text-sm text-gray-700">
-            <p>Suma puntos en cada partido según tu puntería:</p>
             <div className="grid grid-cols-2 gap-4">
               <div className="p-3 bg-blue-50 rounded-lg">
                 <p className="font-bold text-blue-800">Resultado</p>
-                <p>Acertar Ganador/Empate</p>
-                <p className="text-lg font-bold">5 - 10 pts</p>
+                <p className="text-xs">Ganador/Empate</p>
+                <div className="flex justify-between mt-1 text-xs">
+                  <span>Grupos: <b>5</b></span>
+                  <span>KO: <b>10</b></span>
+                </div>
               </div>
               <div className="p-3 bg-green-50 rounded-lg">
                 <p className="font-bold text-green-800">Goles Exactos</p>
-                <p>Por cada equipo</p>
-                <p className="text-lg font-bold">2 - 4 pts</p>
+                <p className="text-xs">Por equipo</p>
+                <div className="flex justify-between mt-1 text-xs">
+                  <span>Grupos: <b>2</b></span>
+                  <span>KO: <b>4</b></span>
+                </div>
               </div>
               <div className="p-3 bg-orange-50 rounded-lg col-span-2">
                 <p className="font-bold text-orange-800">Diferencia de Goles</p>
-                <p>Suma si aciertas la ventaja exacta</p>
-                <p className="text-lg font-bold">1 - 2 pts</p>
+                <p className="text-xs text-orange-700 italic">Suma solo si aciertas el resultado</p>
+                <div className="flex justify-between mt-1 text-xs">
+                  <span>Grupos: <b>1</b></span>
+                  <span>KO: <b>2</b></span>
+                </div>
+              </div>
+            </div>
+            <p className="text-[10px] text-gray-500 text-center">KO = Fase de eliminación directa (Dieciseisavos en adelante)</p>
+          </div>
+        </section>
+
+        <section className="bg-white rounded-xl shadow-md p-6 border-l-4 border-yellow-500">
+          <h2 className="text-xl font-bold mb-3 flex items-center">
+            <span className="mr-2">💡</span> Ejemplo Práctico
+          </h2>
+          <div className="text-sm space-y-3">
+            <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-100">
+              <p className="font-semibold text-yellow-800 mb-1">Si tu pronóstico es 1 - 0</p>
+              <div className="space-y-1 text-xs">
+                <p className="flex justify-between"><span>Si el partido termina 1 - 0:</span> <span className="font-bold text-green-600">+10 pts (Pleno)</span></p>
+                <p className="flex justify-between"><span>Si el partido termina 2 - 1:</span> <span className="font-bold text-blue-600">+6 pts</span></p>
+                <p className="text-[10px] text-gray-500 mt-1">* En fase de grupos. ¡El doble en finales!</p>
               </div>
             </div>
           </div>
