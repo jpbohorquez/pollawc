@@ -377,6 +377,54 @@ def get_my_predictions_in_group(
         
     return enriched_preds
 
+@app.get("/groups/{group_id}/matches/{match_id}/predictions")
+def get_group_predictions_for_match(
+    group_id: UUID,
+    match_id: UUID,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    # 1. Verificar que el usuario pertenece al grupo
+    member = session.exec(
+        select(UserGroupLink).where(
+            UserGroupLink.user_id == current_user.id,
+            UserGroupLink.group_id == group_id
+        )
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="No tienes acceso a este grupo")
+
+    # 2. Verificar que el partido existe y está bloqueado
+    match = session.get(Match, match_id)
+    if not match:
+        raise HTTPException(status_code=404, detail="Partido no encontrado")
+    
+    # Un partido se bloquea 5 minutos antes de empezar
+    now = datetime.utcnow()
+    is_locked = (match.start_at - now).total_seconds() / 60 < 5
+    
+    if not is_locked and not match.is_finished:
+        raise HTTPException(status_code=403, detail="Los pronósticos aún no son públicos para este partido")
+
+    # 3. Obtener todos los pronósticos del grupo para este partido
+    results = session.exec(
+        select(Prediction, User.username)
+        .join(User, Prediction.user_id == User.id)
+        .where(
+            Prediction.group_id == group_id,
+            Prediction.match_id == match_id
+        )
+    ).all()
+
+    return [
+        {
+            "username": username, 
+            "predicted_goals1": p.predicted_goals1, 
+            "predicted_goals2": p.predicted_goals2
+        } 
+        for p, username in results
+    ]
+
 @app.post("/predictions/bulk")
 def create_bulk_predictions(
     predictions_data: List[dict], 

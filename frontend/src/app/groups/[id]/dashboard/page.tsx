@@ -4,6 +4,7 @@ import { useEffect, useState, use } from "react";
 import { apiFetch } from "@/services/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import PredictionsModal from "@/components/PredictionsModal";
 
 interface Match {
   id: string;
@@ -33,6 +34,7 @@ export default function GroupDashboard({ params }: { params: Promise<{ id: strin
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -199,14 +201,27 @@ export default function GroupDashboard({ params }: { params: Promise<{ id: strin
                 <div className="flex-1 text-left font-bold text-gray-700 text-sm truncate">{match.team2}</div>
               </div>
               
-              {finished ? (
+              {finished && (
                 <div className="mt-3 pt-3 border-t border-green-100 flex justify-center gap-4 items-center">
                     <span className="text-[10px] font-bold text-gray-400 uppercase">Resultado Real:</span>
                     <span className="text-sm font-black text-gray-800 bg-gray-100 px-3 py-1 rounded-lg">
                         {pred.actual_goals1} - {pred.actual_goals2}
                     </span>
                 </div>
-              ) : locked && (
+              )}
+
+              {(locked || finished) && (
+                <div className="mt-3">
+                  <button 
+                    onClick={() => setSelectedMatch(match)}
+                    className="w-full py-2.5 bg-green-50 text-green-700 text-[10px] font-black uppercase rounded-xl hover:bg-green-100 transition-colors border border-green-100"
+                  >
+                    Ver pollas del grupo
+                  </button>
+                </div>
+              )}
+
+              {!finished && locked && (
                 <div className="mt-2 text-center text-[9px] text-red-400 font-bold uppercase flex items-center justify-center gap-1">
                   🔒 Bloqueado
                 </div>
@@ -215,6 +230,15 @@ export default function GroupDashboard({ params }: { params: Promise<{ id: strin
           );
         })}
       </div>
+
+      {selectedMatch && (
+        <PredictionsModal 
+          matchId={selectedMatch.id}
+          groupId={groupId}
+          matchTitle={`${selectedMatch.team1} vs ${selectedMatch.team2}`}
+          onClose={() => setSelectedMatch(null)}
+        />
+      )}
 
       <footer className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t shadow-2xl flex justify-center z-20">
         <button
