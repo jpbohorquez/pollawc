@@ -12,6 +12,7 @@ interface LeaderboardEntry {
   avatar_url: string | null;
   total_points: number;
   predictions_count: number;
+  exact_matches_count: number;
 }
 
 interface LeaderboardData {
@@ -75,6 +76,7 @@ export default function GroupRankingPage({ params }: { params: Promise<{ id: str
               <tr className="text-[10px] text-gray-400 uppercase tracking-widest border-b border-gray-50">
                 <th className="py-4 px-2 text-center w-12">Pos</th>
                 <th className="py-4 px-2 text-left">Participante</th>
+                <th className="py-4 px-2 text-center">🎯 Plenos</th>
                 <th className="py-4 px-2 text-right">Pts</th>
               </tr>
             </thead>
@@ -105,6 +107,9 @@ export default function GroupRankingPage({ params }: { params: Promise<{ id: str
                             <span className="text-[10px] text-gray-400 truncate">@{entry.username} · {entry.predictions_count} pronósticos</span>
                         </div>
                     </div>
+                  </td>
+                  <td className="py-4 px-2 text-center">
+                    <span className="text-sm font-black text-gray-700">{entry.exact_matches_count}</span>
                   </td>
                   <td className="py-4 px-2 text-right">
                     <span className="font-black text-green-700">{entry.total_points}</span>

@@ -9,6 +9,7 @@ class LeaderboardEntry(BaseModel):
     avatar_url: str | None
     total_points: int
     predictions_count: int
+    exact_matches_count: int
 
 class LeaderboardRead(BaseModel):
     group_id: UUID

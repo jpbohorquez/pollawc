@@ -504,6 +504,7 @@ def get_group_leaderboard(
     
     for user in members:
         total_pts = 0
+        exact_count = 0
         preds = session.exec(select(Prediction).where(Prediction.user_id == user.id, Prediction.group_id == group_id)).all()
         
         for p in preds:
@@ -520,6 +521,10 @@ def get_group_leaderboard(
                     pts_diff=config.pts_diff_ko if is_ko else config.pts_diff_gr
                 )
                 total_pts += pts
+                
+                # Verificar si es marcador exacto
+                if p.predicted_goals1 == m.actual_goals1 and p.predicted_goals2 == m.actual_goals2:
+                    exact_count += 1
         
         leaderboard.append(LeaderboardEntry(
             user_id=user.id,
@@ -527,7 +532,8 @@ def get_group_leaderboard(
             full_name=user.full_name,
             avatar_url=user.avatar_url,
             total_points=total_pts,
-            predictions_count=len(preds)
+            predictions_count=len(preds),
+            exact_matches_count=exact_count
         ))
     
     # 4. Ordenar: Puntos desc, luego nombre
