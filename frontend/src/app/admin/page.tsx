@@ -21,6 +21,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [message, setMessage] = useState("");
+  const [pastVisibleCount, setPastVisibleCount] = useState(4);
   const [showAddMatch, setShowAddMatch] = useState(false);
   const [newMatch, setNewMatch] = useState({
     team1: "", team2: "", stadium: "", start_at: "", phase: "knockout"
@@ -98,6 +99,12 @@ export default function AdminPage() {
   if (loading) return <div className="p-8 text-center font-bold">Verificando credenciales admin...</div>;
   if (!isAdmin) return null;
 
+  const now = new Date();
+  const pastMatches = matches.filter(m => new Date(m.start_at) < now);
+  const futureMatches = matches.filter(m => new Date(m.start_at) >= now);
+  const displayedPastMatches = pastMatches.slice(-pastVisibleCount);
+  const visibleMatches = [...displayedPastMatches, ...futureMatches];
+
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6 max-w-2xl mx-auto pb-24">
       <header className="flex justify-between items-center mb-8 border-b border-gray-800 pb-4">
@@ -124,8 +131,19 @@ export default function AdminPage() {
       </div>
 
       <div className="space-y-4">
-        <h2 className="text-sm font-bold text-gray-500 uppercase px-2">Partidos del Torneo</h2>
-        {matches.map((m) => (
+        <div className="flex justify-between items-center px-2">
+            <h2 className="text-sm font-bold text-gray-500 uppercase">Partidos del Torneo</h2>
+            {pastVisibleCount < pastMatches.length && (
+                <button 
+                    onClick={() => setPastVisibleCount(prev => prev + 4)}
+                    className="text-[10px] font-bold text-blue-400 hover:text-blue-300 uppercase tracking-widest"
+                >
+                    + Ver 4 anteriores ({pastMatches.length - pastVisibleCount} restantes)
+                </button>
+            )}
+        </div>
+        
+        {visibleMatches.map((m) => (
           <div key={m.id} className="bg-gray-800 p-5 rounded-2xl border border-gray-700 shadow-sm">
             <div className="flex justify-between text-[10px] text-gray-400 mb-3 uppercase font-bold tracking-widest">
               <span>{m.phase}</span>

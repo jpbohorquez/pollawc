@@ -34,6 +34,7 @@ export default function GroupDashboard({ params }: { params: Promise<{ id: strin
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [pastVisibleCount, setPastVisibleCount] = useState(4);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const router = useRouter();
 
@@ -138,6 +139,12 @@ export default function GroupDashboard({ params }: { params: Promise<{ id: strin
 
   if (loading) return <div className="p-8 text-center text-green-700 font-bold">Cargando polla...</div>;
 
+  const now = new Date();
+  const pastMatches = matches.filter(m => new Date(m.start_at) < now);
+  const futureMatches = matches.filter(m => new Date(m.start_at) >= now);
+  const displayedPastMatches = pastMatches.slice(-pastVisibleCount);
+  const visibleMatches = [...displayedPastMatches, ...futureMatches];
+
   return (
     <div className="min-h-screen bg-gray-100 pb-24 font-sans">
       <header className="bg-green-700 text-white p-4 sticky top-0 z-10 shadow-md flex items-center justify-between">
@@ -158,7 +165,18 @@ export default function GroupDashboard({ params }: { params: Promise<{ id: strin
           </div>
         )}
 
-        {matches.map((match) => {
+        {pastVisibleCount < pastMatches.length && (
+          <div className="flex justify-center pt-2">
+            <button 
+              onClick={() => setPastVisibleCount(prev => prev + 4)}
+              className="text-[10px] font-black text-green-700 bg-white border border-green-100 px-6 py-3 rounded-2xl hover:bg-green-50 transition-all uppercase tracking-widest shadow-sm active:scale-95"
+            >
+              ↓ Ver 4 resultados más ({pastMatches.length - pastVisibleCount} restantes)
+            </button>
+          </div>
+        )}
+
+        {visibleMatches.map((match) => {
           const locked = isLocked(match.start_at);
           const pred = predictions[match.id];
           const finished = pred?.is_finished;
