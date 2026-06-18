@@ -13,6 +13,7 @@ interface Match {
   start_at: string;
   group_name: string;
   phase: string;
+  is_locked: boolean;
 }
 
 interface PredictionState {
@@ -96,13 +97,6 @@ export default function GroupDashboard({ params }: { params: Promise<{ id: strin
     }));
   };
 
-  const isLocked = (startAt: string) => {
-    const matchTime = new Date(startAt).getTime();
-    const now = new Date().getTime();
-    const diffMinutes = (matchTime - now) / (1000 * 60);
-    return diffMinutes < 5;
-  };
-
   const handleSave = async () => {
     setSaving(true);
     setMessage("");
@@ -110,7 +104,7 @@ export default function GroupDashboard({ params }: { params: Promise<{ id: strin
       const toSave = Object.entries(predictions)
         .filter(([matchId, data]) => {
           const match = matches.find(m => m.id === matchId);
-          return data.goals1 !== "" && data.goals2 !== "" && match && !isLocked(match.start_at) && !data.is_finished;
+          return data.goals1 !== "" && data.goals2 !== "" && match && !match.is_locked && !data.is_finished;
         })
         .map(([matchId, data]) => ({
           match_id: matchId,
@@ -177,7 +171,7 @@ export default function GroupDashboard({ params }: { params: Promise<{ id: strin
         )}
 
         {visibleMatches.map((match) => {
-          const locked = isLocked(match.start_at);
+          const locked = match.is_locked;
           const pred = predictions[match.id];
           const finished = pred?.is_finished;
           
@@ -185,7 +179,7 @@ export default function GroupDashboard({ params }: { params: Promise<{ id: strin
             <div key={match.id} className={`bg-white rounded-2xl shadow-sm p-4 border ${finished ? "border-green-200 bg-green-50/20" : locked ? "opacity-75 border-gray-200" : "border-transparent hover:border-green-200 transition-colors"}`}>
               <div className="flex justify-between text-[10px] text-gray-400 mb-3 uppercase font-bold tracking-wider">
                 <span>{match.phase === 'group' ? `Grupo ${match.group_name}` : match.phase}</span>
-                <span>{new Date(match.start_at).toLocaleDateString([], {day:'2-digit', month:'short'})} · {new Date(match.start_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                <span>{new Date(match.start_at).toLocaleDateString([], {day:'2-digit', month:'short'})} · {new Date(match.start_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: true})}</span>
               </div>
               
               <div className="flex items-center justify-between gap-2">

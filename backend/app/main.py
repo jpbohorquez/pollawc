@@ -3,6 +3,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session, create_engine, select, delete
 from app.models.models import Match, Group, Prediction, User, SQLModel
+from app.schemas.match import MatchRead
 
 # ... (rest of imports)
 from app.services.scoring import calculate_points
@@ -326,9 +327,29 @@ def update_group_config(
     session.refresh(config)
     return config
 
-@app.get("/matches", response_model=List[Match])
+def map_match_to_read(match: Match) -> MatchRead:
+    tz_gmt5 = timezone(timedelta(hours=-5))
+    start_at_utc = match.start_at.replace(tzinfo=tz_gmt5).astimezone(timezone.utc)
+    now_utc = datetime.now(timezone.utc)
+    is_locked = (start_at_utc - now_utc).total_seconds() / 60 < 5
+    return MatchRead(
+        id=match.id,
+        team1=match.team1,
+        team2=match.team2,
+        group_name=match.group_name,
+        stadium=match.stadium,
+        start_at=start_at_utc,
+        phase=match.phase,
+        actual_goals1=match.actual_goals1,
+        actual_goals2=match.actual_goals2,
+        is_finished=match.is_finished,
+        is_locked=is_locked
+    )
+
+@app.get("/matches", response_model=List[MatchRead])
 def get_matches(session: Session = Depends(get_session)):
-    return session.exec(select(Match)).all()
+    matches = session.exec(select(Match)).all()
+    return [map_match_to_read(m) for m in matches]
 
 from app.schemas.leaderboard import LeaderboardRead, LeaderboardEntry
 
@@ -400,8 +421,10 @@ def get_group_predictions_for_match(
         raise HTTPException(status_code=404, detail="Partido no encontrado")
     
     # Un partido se bloquea 5 minutos antes de empezar
-    now = datetime.utcnow()
-    is_locked = (match.start_at - now).total_seconds() / 60 < 5
+    tz_gmt5 = timezone(timedelta(hours=-5))
+    start_at_utc = match.start_at.replace(tzinfo=tz_gmt5).astimezone(timezone.utc)
+    now_utc = datetime.now(timezone.utc)
+    is_locked = (start_at_utc - now_utc).total_seconds() / 60 < 5
     
     if not is_locked and not match.is_finished:
         raise HTTPException(status_code=403, detail="Los pronósticos aún no son públicos para este partido")
@@ -440,9 +463,11 @@ def create_bulk_predictions(
         if not match:
             continue
             
-        # El fixture está en GMT-5, convertimos la hora UTC actual a GMT-5 para comparar
-        now_gmt5 = datetime.now(timezone(timedelta(hours=-5))).replace(tzinfo=None)
-        time_diff = match.start_at - now_gmt5
+        # El fixture está en GMT-5, convertimos las horas a UTC para comparar de forma estándar y segura
+        tz_gmt5 = timezone(timedelta(hours=-5))
+        match_start_utc = match.start_at.replace(tzinfo=tz_gmt5).astimezone(timezone.utc)
+        now_utc = datetime.now(timezone.utc)
+        time_diff = match_start_utc - now_utc
         
         if time_diff.total_seconds() < 300: # 5 minutos = 300 segundos
             # Si falta menos de 5 min o ya empezó, ignoramos este item
@@ -552,7 +577,7 @@ async def get_current_active_superuser(
         )
     return current_user
 
-@app.post("/admin/matches/{match_id}/results", response_model=Match)
+@app.post("/admin/matches/{match_id}/results", response_model=MatchRead)
 def update_match_result(
     match_id: UUID,
     result_data: MatchUpdateResult,
@@ -574,9 +599,9 @@ def update_match_result(
     session.add(match)
     session.commit()
     session.refresh(match)
-    return match
+    return map_match_to_read(match)
 
-@app.post("/admin/matches", response_model=Match)
+@app.post("/admin/matches", response_model=MatchRead)
 def create_match_admin(
     match_data: MatchCreateAdmin,
     session: Session = Depends(get_session),
@@ -593,7 +618,7 @@ def create_match_admin(
     session.add(new_match)
     session.commit()
     session.refresh(new_match)
-    return new_match
+    return map_match_to_read(new_match)
 
 @app.get("/test-scoring")
 def test_scoring(p1: int, p2: int, a1: int, a2: int, knockout: bool = False):

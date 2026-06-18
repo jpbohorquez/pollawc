@@ -147,7 +147,7 @@ export default function AdminPage() {
           <div key={m.id} className="bg-gray-800 p-5 rounded-2xl border border-gray-700 shadow-sm">
             <div className="flex justify-between text-[10px] text-gray-400 mb-3 uppercase font-bold tracking-widest">
               <span>{m.phase}</span>
-              <span>{new Date(m.start_at).toLocaleString()}</span>
+              <span>{new Date(m.start_at).toLocaleString([], { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}</span>
             </div>
             
             <div className="flex items-center justify-between gap-4 mb-4">
